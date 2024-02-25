@@ -1,7 +1,3 @@
-#include <SPI.h>
-#include <nRF24L01.h>
-#include <RF24.h>
-
 const int trigPin = 9;  
 const int echoPin = 10; 
 const int carDistanceThresholdCm = 30;
