@@ -16,11 +16,20 @@ RF24 radio(7, 8);  // CE, CSN
 const byte address[6] = "G1083";
 const int rfPayloadBytesLimit = 32;
 
+/**
+* Converts the data object to a json string and 
+* sends it over radio to the receiver board
+*
+* @author Sandun Munasinghe
+**/
 void broadcastMessage(JSONVar dataObj) {
   String jsonPayload = JSON.stringify(dataObj);
-  char message[jsonPayload.length() + 1];
+  char message[jsonPayload.length()];
 
-  for (int x = 0; x < jsonPayload.length() + 1; x++) {
+  Serial.print("json length = ");
+  Serial.println(jsonPayload.length());
+
+  for (int x = 0; x < jsonPayload.length(); x++) {
     message[x] = jsonPayload[x];
   }
 
@@ -66,7 +75,7 @@ void loop() {
 
   JSONVar dataObj;
 
-  dataObj["dist"] = distance;
+  dataObj["dist"] = (int)distance;
   dataObj["car"] = isCarInGarage;
   dataObj["door"] = true;
 
