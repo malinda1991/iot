@@ -1,8 +1,9 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include <stdlib.h>
+// #include <math.h>
 #include <Arduino_JSON.h>
-#include <math.h>
 
 const int trigPin = 9;
 const int echoPin = 10;
@@ -15,6 +16,56 @@ RF24 radio(7, 8);  // CE, CSN
 
 const byte address[6] = "G1083";
 const int rfPayloadBytesLimit = 32;
+const char SEPERATOR = "~";
+const int reservedBytes = 2;  // for the msgID and 1st seperator
+const int msgBodyBytes = rfPayloadBytesLimit - reservedBytes;
+
+char lastSentMsgId = "";  // to avoid sending the same msgID as the last one
+
+// ------------------ should put in common----------
+const String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+enum CarInGarage {
+  NO,
+  YES
+};
+
+enum GarageDoor {
+  OPEN,
+  CLOSED
+};
+
+struct garageData {
+  int distance;
+  CarInGarage isCarInGarage;
+  GarageDoor door;
+  String extra;
+};
+
+// ------------------ end of should put in common----------
+String buildJsonBody(garageData g1) {
+  JSONVar dataObj;
+
+  dataObj["dist"] = g1.distance;
+  dataObj["car"] = g1.isCarInGarage;
+  dataObj["door"] = g1.door;
+
+  return JSON.stringify(dataObj);
+}
+
+char getMsgId() {
+  char msgId = ALPHABET[random() % 26];
+  while (msgId == lastSentMsgId) {
+    msgId = ALPHABET[random() % 26];
+  }
+  lastSentMsgId = msgId;
+  return msgId;
+}
+
+void breakMessageToChunks(garageData g1) {
+  char msgId = getMsgId();
+  String msgJsonBody = buildJsonBody(g1);
+  
+}
 
 /**
 * Converts the data object to a json string and 
@@ -22,20 +73,20 @@ const int rfPayloadBytesLimit = 32;
 *
 * @author Sandun Munasinghe
 **/
-void broadcastMessage(JSONVar dataObj) {
-  String jsonPayload = JSON.stringify(dataObj);
-  char message[jsonPayload.length()];
+void broadcastMessage(garageData g1) {
+  breakMessageToChunks(g1);
+  // char message[jsonPayload.length()];
 
-  Serial.print("json length = ");
-  Serial.println(jsonPayload.length());
+  // Serial.print("json length = ");
+  // Serial.println(jsonPayload.length());
 
-  for (int x = 0; x < jsonPayload.length(); x++) {
-    message[x] = jsonPayload[x];
-  }
+  // for (int x = 0; x < jsonPayload.length(); x++) {
+  //   message[x] = jsonPayload[x];
+  // }
 
-  radio.write(&message, sizeof(message));
-  Serial.println(message);
-  Serial.println("Radio message sent!");
+  // radio.write(&message, sizeof(message));
+  // Serial.println(msgChunks);
+  // Serial.println("Radio message sent!");
 }
 
 void setup() {
@@ -62,24 +113,25 @@ void loop() {
   Serial.println(distance);
 
   String message;
-  bool isCarInGarage = false;
+  CarInGarage isCarInGarage = NO;
 
   if (distance < carDistanceCm) {
     // car is in the garage
     message = "Car is in the garage :GREEN";
-    isCarInGarage = true;
+    isCarInGarage = YES;
   } else {
     // car is not in the garage
     message = "Car is not in the garage :RED";
   }
 
-  JSONVar dataObj;
+  struct garageData g1;
+  g1.distance = (int)distance;
+  g1.isCarInGarage = isCarInGarage;
+  g1.door = CLOSED;
+  g1.extra = "abcdefghijklmopqrstuvwxyz";
 
-  dataObj["dist"] = (int)distance;
-  dataObj["car"] = isCarInGarage;
-  dataObj["door"] = true;
 
-  broadcastMessage(dataObj);
+  broadcastMessage(g1);
   Serial.println(message);
   Serial.println("-------------");
   delay(LOOP_DELAY);
