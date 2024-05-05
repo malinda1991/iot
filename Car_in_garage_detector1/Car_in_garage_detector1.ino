@@ -1,26 +1,26 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-#include <stdlib.h>
-// #include <math.h>
-#include <Arduino_JSON.h>
 
 const int trigPin = 9;
 const int echoPin = 10;
+const int doorSensorPin = 3;
+const int relayPin = 4;
 const int carDistanceCm = 30;
-const int LOOP_DELAY = 5000;
-// const byte GARAGE_RF_CHANNEL[6] = "G1083";
+const int LOOP_DELAY = 2000;
 
 float duration, distance;
+int doorState;
+
 RF24 radio(7, 8);  // CE, CSN
 
-const byte address[6] = "G1083";
-const int rfPayloadBytesLimit = 32;
-const char SEPERATOR = "~";
-const int reservedBytes = 2;  // for the msgID and 1st seperator
+const byte GARAGE_RF_CHANNEL[6] = "G1083";
+const int rfPayloadBytesLimit = 32;  // NRF byte limit is 32
+const char SEPERATOR = "_";
+const int reservedBytes = 2;  // for the msg index values and seperators
 const int msgBodyBytes = rfPayloadBytesLimit - reservedBytes;
 
-char lastSentMsgId = "";  // to avoid sending the same msgID as the last one
+const String GARAGE_ID = "G1";
 
 // ------------------ should put in common----------
 const String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -34,38 +34,19 @@ enum GarageDoor {
   CLOSED
 };
 
+enum GarageLights {
+  ON,
+  OFF
+};
+
 struct garageData {
   int distance;
   CarInGarage isCarInGarage;
   GarageDoor door;
-  String extra;
+  int temperature;
+  int humidity;
+  GarageLights lights;
 };
-
-// ------------------ end of should put in common----------
-String buildJsonBody(garageData g1) {
-  JSONVar dataObj;
-
-  dataObj["dist"] = g1.distance;
-  dataObj["car"] = g1.isCarInGarage;
-  dataObj["door"] = g1.door;
-
-  return JSON.stringify(dataObj);
-}
-
-char getMsgId() {
-  char msgId = ALPHABET[random() % 26];
-  while (msgId == lastSentMsgId) {
-    msgId = ALPHABET[random() % 26];
-  }
-  lastSentMsgId = msgId;
-  return msgId;
-}
-
-void breakMessageToChunks(garageData g1) {
-  char msgId = getMsgId();
-  String msgJsonBody = buildJsonBody(g1);
-  
-}
 
 /**
 * Converts the data object to a json string and 
@@ -73,29 +54,76 @@ void breakMessageToChunks(garageData g1) {
 *
 * @author Sandun Munasinghe
 **/
-void broadcastMessage(garageData g1) {
-  breakMessageToChunks(g1);
-  // char message[jsonPayload.length()];
+void broadcastData(garageData g1) {
 
-  // Serial.print("json length = ");
-  // Serial.println(jsonPayload.length());
+  char message[rfPayloadBytesLimit] = "";
+  message[0] = g1.isCarInGarage == YES ? "Y" : "N";
+  message[1] = ",";
+  message[2] = g1.door == OPEN ? "O" : "C";
 
-  // for (int x = 0; x < jsonPayload.length(); x++) {
-  //   message[x] = jsonPayload[x];
-  // }
+  Serial.println(message);
 
-  // radio.write(&message, sizeof(message));
-  // Serial.println(msgChunks);
-  // Serial.println("Radio message sent!");
+  for(int x = 1; x<=5; x++){
+    // iterations the number of messages needs to be sent
+    String key = "";
+    String value = "";
+    switch (x) {
+      case 1:
+        // Is car in the garage
+        key = "car";
+        value = g1.isCarInGarage == YES ? "Y" : "N";
+        break;
+      case 2:
+        // Garage door
+        key = "door";
+        value = g1.door == OPEN ? "O" : "C";
+        break;
+      case 3:
+        // Temperature
+        key = "temp";
+        value = g1.temperature;
+        break;
+      case 4:
+        // Humidity
+        key = "humid";
+        value = g1.humidity;
+        break;
+      case 5:
+        // lights
+        key = "lights";
+        value = g1.lights == ON ? "O" : "F";
+        break;
+    }
+
+/**
+* Message anatomy "{Garage ID}{seperator}{Data Key}{seperator}{Data Value}"
+**/
+      String message = GARAGE_ID + SEPERATOR + key + SEPERATOR + value;
+      Serial.println(message);
+      sendRadioMessage(message);
+      // delay(100);
+  }
+}
+
+void sendRadioMessage(String message) {
+    char radioMessage[rfPayloadBytesLimit] = "";
+    for (int x = 0; x < message.length(); x++) {
+      radioMessage[x] = message[x];
+    }
+    radio.write(&radioMessage, sizeof(radioMessage));
+    Serial.println(radioMessage);
+    Serial.println("Radio message sent!");
 }
 
 void setup() {
   // put your setup code here, to run once:
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
+  pinMode(doorSensorPin, INPUT_PULLUP);
+  pinMode(relayPin, OUTPUT);
   Serial.begin(9600);
   radio.begin();
-  radio.openWritingPipe(address);
+  radio.openWritingPipe(GARAGE_RF_CHANNEL);
   radio.setPALevel(RF24_PA_MIN);
   radio.stopListening();
 }
@@ -112,6 +140,8 @@ void loop() {
   Serial.print("Distance: ");
   Serial.println(distance);
 
+  doorState = digitalRead(doorSensorPin);
+
   String message;
   CarInGarage isCarInGarage = NO;
 
@@ -124,15 +154,28 @@ void loop() {
     message = "Car is not in the garage :RED";
   }
 
+  Serial.println("Door state ");
+  Serial.print(doorState);
+
   struct garageData g1;
   g1.distance = (int)distance;
   g1.isCarInGarage = isCarInGarage;
-  g1.door = CLOSED;
-  g1.extra = "abcdefghijklmopqrstuvwxyz";
+  g1.door = doorState == HIGH ? OPEN : CLOSED;
+  g1.temperature = 40;
+  g1.humidity = 20;
+
+  // 230V relay trigger
+  if(g1.door == OPEN){
+    // Turn On the relay 
+    digitalWrite(relayPin, LOW); // LOW means on
+    g1.lights = ON;
+  }else{
+    // Turn Off the relay
+    digitalWrite(relayPin, HIGH);
+    g1.lights = OFF;
+  }
 
 
-  broadcastMessage(g1);
-  Serial.println(message);
-  Serial.println("-------------");
+  broadcastData(g1);
   delay(LOOP_DELAY);
 }
