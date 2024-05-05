@@ -1,7 +1,7 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-#include <Arduino_JSON.h>
+// #include <Arduino_JSON.h>
 
 RF24 radio(7, 8); // CE, CSN
 // const GARAGE_RF_CHANNEL = "";
