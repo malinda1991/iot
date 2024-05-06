@@ -1,6 +1,6 @@
 // import { isMainThread, parentPort, Worker } from 'worker_threads';
 
-import { putToMemoryCache } from '@/common/libraries/memoryCache';
+import { getFromMemoryCache, putToMemoryCache } from '@/common/libraries/memoryCache';
 import serialPort from '@/common/libraries/serialPort';
 import { garageData } from '@/common/utils/mappings';
 
@@ -22,11 +22,20 @@ const invokeWorker = () => {
 
           const translatedData = {
             id: flag,
-            key: getGarageKeyName(extractedData),
-            value: getGarageValueName(extractedData),
+            [extractedData.key]: {
+              name: getGarageKeyName(extractedData),
+              value: getGarageValueName(extractedData),
+            },
           };
 
-          putToMemoryCache(translatedData.key, translatedData.value);
+          let dataObjFromCache = getFromMemoryCache(flag) || {};
+
+          dataObjFromCache = {
+            ...dataObjFromCache,
+            ...translatedData,
+          };
+
+          putToMemoryCache(flag, dataObjFromCache);
           console.log(translatedData);
         }
       }
