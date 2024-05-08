@@ -1,4 +1,4 @@
-import garageMonitor from '@/services/workers/garageMonitor';
+import garageMonitor from '@/services/garage/garageMonitor';
 
 /**
  * executes a set of functions on server startup
