@@ -2,31 +2,55 @@
  * Common utility to manage key value mappings
  */
 
+type ReceiverDataKeys = {
+  car: string;
+  garageDoor: string;
+  temperature: string;
+  humidity: string;
+  garageLights: string;
+};
 type KeyMapper = Record<string, string>;
 type ValueMapper = Record<string, KeyMapper>;
 
 const flagsToAccept = ['G1'];
 const seperator = '!';
 
+const values = {
+  INSIDE: 'Inside',
+  OUTSIDE: 'Outside',
+  OPEN: 'Open',
+  CLOSED: 'Closed',
+  ON: 'ON',
+  OFF: 'OFF',
+};
+
+const keys: ReceiverDataKeys = {
+  car: 'car',
+  garageDoor: 'door',
+  temperature: 'temp',
+  humidity: 'humid',
+  garageLights: 'lights',
+};
+
 const keyMapping: KeyMapper = {
-  car: 'Car',
-  door: 'Door',
-  temp: 'Temperature',
-  humid: 'Humidity',
-  lights: 'Garage lights',
+  [keys.car]: 'Car',
+  [keys.garageDoor]: 'Door',
+  [keys.temperature]: 'Temperature',
+  [keys.humidity]: 'Humidity',
+  [keys.garageLights]: 'Garage lights',
 };
 const valueMapping: ValueMapper = {
-  car: {
-    Y: 'Inside',
-    N: 'Outside',
+  [keys.car]: {
+    Y: values.INSIDE,
+    N: values.OUTSIDE,
   },
-  door: {
-    O: 'Open',
-    C: 'Closed',
+  [keys.garageDoor]: {
+    O: values.OPEN,
+    C: values.CLOSED,
   },
-  lights: {
-    O: 'ON',
-    F: 'OFF',
+  [keys.garageLights]: {
+    O: values.ON,
+    F: values.OFF,
   },
 };
 
@@ -45,6 +69,8 @@ const getGarageValueName = (extractedData: { key: string; value: string }): stri
 };
 
 export const garageData = {
+  keys,
+  values,
   flagsToAccept,
   seperator,
   getGarageKeyName,
