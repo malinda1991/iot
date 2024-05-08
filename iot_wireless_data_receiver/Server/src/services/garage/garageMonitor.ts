@@ -1,5 +1,3 @@
-// import { isMainThread, parentPort, Worker } from 'worker_threads';
-
 import homeAssistant from '@/common/libraries/homeAssistant';
 import { getFromMemoryCache, putToMemoryCache } from '@/common/libraries/memoryCache';
 import serialPort from '@/common/libraries/serialPort';
@@ -107,20 +105,6 @@ const invokeMonitor = async () => {
       }
     });
   });
-
-  //   if (isMainThread) {
-  //     // This code is executed in the main thread and not in the worker.
-
-  //     // Create the worker.
-  //     const worker = new Worker(__filename);
-  //     // Listen for messages from the worker and print them.
-  //     worker.on('message', (msg) => {
-  //       console.log(msg);
-  //     });
-  //   } else {
-  //     // This code is executed in the worker and not in the main thread.
-  //     parentPort.postMessage('Called by worker');
-  //   }
 };
 
 const invokeGarageDataSender = async () => {
