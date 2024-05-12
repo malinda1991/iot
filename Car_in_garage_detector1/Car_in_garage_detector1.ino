@@ -6,11 +6,14 @@ const int trigPin = 9;
 const int echoPin = 10;
 const int doorSensorPin = 3;
 const int relayPin = 4;
+// const int lightButtonPin = 6;
+
 const int carDistanceCm = 30;
 const int LOOP_DELAY = 2000;
 
 float duration, distance;
-int doorState;
+int doorState, lightButtonState;
+// bool garageLights = false;
 
 RF24 radio(7, 8);  // CE, CSN
 
@@ -48,6 +51,18 @@ struct garageData {
   GarageLights lights;
 };
 
+void operateGarageLights(GarageLights lights, garageData *data) {
+  if (lights == ON) {
+    // Turn On the 230V relay
+    digitalWrite(relayPin, LOW);  // LOW means on
+    data->lights = ON;
+  } else {
+    // Turn Off the 230V relay
+    digitalWrite(relayPin, HIGH);
+    data->lights = OFF;
+  }
+}
+
 /**
 * Converts the data object to a json string and 
 * sends it over radio to the receiver board
@@ -63,7 +78,7 @@ void broadcastData(garageData g1) {
 
   Serial.println(message);
 
-  for(int x = 1; x<=5; x++){
+  for (int x = 1; x <= 5; x++) {
     // iterations the number of messages needs to be sent
     String key = "";
     String value = "";
@@ -95,24 +110,23 @@ void broadcastData(garageData g1) {
         break;
     }
 
-/**
+    /**
 * Message anatomy "{Garage ID}{seperator}{Data Key}{seperator}{Data Value}"
 **/
-      String message = GARAGE_ID + SEPERATOR + key + SEPERATOR + value;
-      Serial.println(message);
-      sendRadioMessage(message);
-      // delay(100);
+    String message = GARAGE_ID + SEPERATOR + key + SEPERATOR + value;
+    Serial.println(message);
+    sendRadioMessage(message);
   }
 }
 
 void sendRadioMessage(String message) {
-    char radioMessage[rfPayloadBytesLimit] = "";
-    for (int x = 0; x < message.length(); x++) {
-      radioMessage[x] = message[x];
-    }
-    radio.write(&radioMessage, sizeof(radioMessage));
-    Serial.println(radioMessage);
-    Serial.println("Radio message sent!");
+  char radioMessage[rfPayloadBytesLimit] = "";
+  for (int x = 0; x < message.length(); x++) {
+    radioMessage[x] = message[x];
+  }
+  radio.write(&radioMessage, sizeof(radioMessage));
+  Serial.println(radioMessage);
+  Serial.println("Radio message sent!");
 }
 
 void setup() {
@@ -121,6 +135,7 @@ void setup() {
   pinMode(echoPin, INPUT);
   pinMode(doorSensorPin, INPUT_PULLUP);
   pinMode(relayPin, OUTPUT);
+  // pinMode(lightButtonPin, INPUT_PULLUP);
   Serial.begin(9600);
   radio.begin();
   radio.openWritingPipe(GARAGE_RF_CHANNEL);
@@ -141,39 +156,35 @@ void loop() {
   Serial.println(distance);
 
   doorState = digitalRead(doorSensorPin);
-
-  String message;
-  CarInGarage isCarInGarage = NO;
-
-  if (distance < carDistanceCm) {
-    // car is in the garage
-    message = "Car is in the garage :GREEN";
-    isCarInGarage = YES;
-  } else {
-    // car is not in the garage
-    message = "Car is not in the garage :RED";
-  }
-
-  Serial.println("Door state ");
-  Serial.print(doorState);
+  // lightButtonState = digitalRead(lightButtonPin);
 
   struct garageData g1;
   g1.distance = (int)distance;
-  g1.isCarInGarage = isCarInGarage;
+  g1.isCarInGarage = NO;
   g1.door = doorState == HIGH ? OPEN : CLOSED;
   g1.temperature = 40;
   g1.humidity = 20;
 
-  // 230V relay trigger
-  if(g1.door == OPEN){
-    // Turn On the relay 
-    digitalWrite(relayPin, LOW); // LOW means on
-    g1.lights = ON;
-  }else{
-    // Turn Off the relay
-    digitalWrite(relayPin, HIGH);
-    g1.lights = OFF;
+  if (distance < carDistanceCm) {
+    // car is in the garage
+    g1.isCarInGarage = YES;
   }
+
+  if (g1.door == OPEN) {
+    // // Turn On the lights
+    operateGarageLights(ON, &g1);
+  } else {
+    // // Turn Off the lights
+    operateGarageLights(OFF, &g1);
+  }
+
+  // if (lightButtonState == HIGH) {
+  //   // light button pressed
+  //   operateGarageLights(ON, &g1);
+  // } else {
+  //   // turn LED off:
+  //   operateGarageLights(OFF, &g1);
+  // }
 
 
   broadcastData(g1);
