@@ -1,4 +1,4 @@
-import homeAssistant from '@/common/libraries/homeAssistant';
+import homeAssistant, { SaveDataWebhookRequest } from '@/common/libraries/homeAssistant';
 import { getFromMemoryCache, putToMemoryCache } from '@/common/libraries/memoryCache';
 import serialPort from '@/common/libraries/serialPort';
 import { garageData } from '@/common/utils/mappings';
@@ -21,38 +21,41 @@ const {
 } = garageData;
 
 const onStateChange = {
-  garageDoor: (garageDoorState: string) => {
+  garageDoor: (garageDoorState: string, data: SaveDataWebhookRequest) => {
     // runs on garage door state change
     const notificationText = `The garage door is ${garageDoorState}`;
     homeAssistant.callNotificationsWebhook({
       title: 'Garage Door : ',
       message: notificationText,
+      data,
     });
   },
-  car: (carState: string) => {
+  car: (carState: string, data: SaveDataWebhookRequest) => {
     // runs on car state change
-
     const notificationText = `The car is ${carState}`;
     homeAssistant.callNotificationsWebhook({
       title: 'Car : ',
       message: notificationText,
+      data,
     });
   },
-  garageLights: (lightsState: string) => {
+  garageLights: (lightsState: string, data: SaveDataWebhookRequest) => {
     // runs on garage lights state change
     const notificationText = `The garage lights are ${lightsState}`;
     homeAssistant.callNotificationsWebhook({
       title: 'Garage Lights : ',
       message: notificationText,
+      data,
     });
   },
 };
 
-const checkForStateChanges = (dataObjFromCache: any, key: string, translatedValue: string) => {
+const checkForStateChanges = (dataObjFromCache: any, key: string, translatedDataObj: any) => {
+  const translatedValue = translatedDataObj[key].value;
   const valueChangeCheck = (triggerCallback: any) => {
     if (dataObjFromCache[key]?.value !== undefined && dataObjFromCache[key]?.value !== translatedValue) {
       // the state has been changed and it is not undefined
-      triggerCallback(translatedValue);
+      triggerCallback(translatedValue, translatedDataObj);
     }
   };
 
@@ -89,18 +92,16 @@ const invokeMonitor = async () => {
 
           const translatedData = {
             id: flag,
+            ...dataObjFromCache,
             [extractedData.key]: {
               name: getGarageKeyName(extractedData),
               value: getGarageValueName(extractedData),
             },
           };
 
-          checkForStateChanges(dataObjFromCache, extractedData.key, translatedData[extractedData.key].value);
+          checkForStateChanges(dataObjFromCache, extractedData.key, translatedData);
 
-          putToMemoryCache(flag, {
-            ...dataObjFromCache,
-            ...translatedData,
-          });
+          putToMemoryCache(flag, translatedData);
         }
       }
     });
