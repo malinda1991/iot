@@ -8,6 +8,7 @@ type ReceiverDataKeys = {
   temperature: string;
   humidity: string;
   garageLights: string;
+  airQuality: string;
 };
 type KeyMapper = Record<string, string>;
 type ValueMapper = Record<string, KeyMapper>;
@@ -30,6 +31,7 @@ const keys: ReceiverDataKeys = {
   temperature: 'temp',
   humidity: 'humid',
   garageLights: 'lights',
+  airQuality: 'AQ',
 };
 
 const keyMapping: KeyMapper = {
@@ -38,6 +40,7 @@ const keyMapping: KeyMapper = {
   [keys.temperature]: 'Temperature',
   [keys.humidity]: 'Humidity',
   [keys.garageLights]: 'Garage lights',
+  [keys.airQuality]: 'Air Quality',
 };
 const valueMapping: ValueMapper = {
   [keys.car]: {

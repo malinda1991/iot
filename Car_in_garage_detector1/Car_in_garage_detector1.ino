@@ -10,13 +10,14 @@ const int NRF_ECHO_PIN = 10;
 const int DOOR_MAG_PIN = 3;
 const int LIGHTS_RELAY_PIN = 4;
 const int DHT_PIN = 5;
+const int MQ_AIR_QUALITY_PIN = A2;
 // const int lightButtonPin = 6;
 
 const int carDistanceCm = 30;
 const int LOOP_DELAY = 2000;
 
 float duration, distance;
-int doorState, lightButtonState;
+int doorState, lightButtonState, aqSensorData, dhtState;
 // bool garageLights = false;
 
 RF24 radio(7, 8);  // CE, CSN
@@ -46,16 +47,17 @@ enum GarageLights {
   OFF
 };
 
-struct garageData {
+struct GarageData {
   int distance;
   CarInGarage isCarInGarage;
   GarageDoor door;
   int temperature;
   int humidity;
   GarageLights lights;
+  int airQuality;
 };
 
-void operateGarageLights(GarageLights lights, garageData *data) {
+void operateGarageLights(GarageLights lights, GarageData *data) {
   if (lights == ON) {
     // Turn On the 230V relay
     digitalWrite(LIGHTS_RELAY_PIN, LOW);  // LOW means on
@@ -73,7 +75,7 @@ void operateGarageLights(GarageLights lights, garageData *data) {
 *
 * @author Sandun Munasinghe
 **/
-void broadcastData(garageData g1) {
+void broadcastData(GarageData g1) {
 
   char message[rfPayloadBytesLimit] = "";
   message[0] = g1.isCarInGarage == YES ? "Y" : "N";
@@ -82,7 +84,7 @@ void broadcastData(garageData g1) {
 
   Serial.println(message);
 
-  for (int x = 1; x <= 5; x++) {
+  for (int x = 1; x <= 6; x++) {
     // iterations the number of messages needs to be sent
     String key = "";
     String value = "";
@@ -112,6 +114,11 @@ void broadcastData(garageData g1) {
         key = "lights";
         value = g1.lights == ON ? "O" : "F";
         break;
+      case 6:
+        // air quality
+        key = "AQ";
+        value = g1.airQuality;
+        break;
     }
 
     /**
@@ -140,6 +147,7 @@ void setup() {
   pinMode(DOOR_MAG_PIN, INPUT_PULLUP);
   pinMode(LIGHTS_RELAY_PIN, OUTPUT);
   pinMode(DHT_PIN, INPUT);
+  pinMode(MQ_AIR_QUALITY_PIN, INPUT);
   // pinMode(lightButtonPin, INPUT_PULLUP);
   Serial.begin(9600);
   radio.begin();
@@ -163,14 +171,16 @@ void loop() {
   doorState = digitalRead(DOOR_MAG_PIN);
   // lightButtonState = digitalRead(lightButtonPin);
 
-  int dht11Values = DHT11.read(DHT_PIN);
+  dhtState = DHT11.read(DHT_PIN);
+  aqSensorData = analogRead(MQ_AIR_QUALITY_PIN);
 
-  struct garageData g1;
+  struct GarageData g1;
   g1.distance = (int)distance;
   g1.isCarInGarage = NO;
   g1.door = doorState == HIGH ? OPEN : CLOSED;
   g1.temperature = DHT11.temperature;
   g1.humidity = DHT11.humidity;
+  g1.airQuality = aqSensorData;
 
   if (distance < carDistanceCm) {
     // car is in the garage
