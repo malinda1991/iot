@@ -1,11 +1,15 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include <dht11.h>
 
-const int trigPin = 9;
-const int echoPin = 10;
-const int doorSensorPin = 3;
-const int relayPin = 4;
+dht11 DHT11;
+
+const int NRF_TRIG_PIN = 9;
+const int NRF_echo_PIN = 10;
+const int DOOR_MAG_PIN = 3;
+const int LIGHTS_RELAY_PIN = 4;
+const int DHT_PIN = 5;
 // const int lightButtonPin = 6;
 
 const int carDistanceCm = 30;
@@ -54,11 +58,11 @@ struct garageData {
 void operateGarageLights(GarageLights lights, garageData *data) {
   if (lights == ON) {
     // Turn On the 230V relay
-    digitalWrite(relayPin, LOW);  // LOW means on
+    digitalWrite(LIGHTS_RELAY_PIN, LOW);  // LOW means on
     data->lights = ON;
   } else {
     // Turn Off the 230V relay
-    digitalWrite(relayPin, HIGH);
+    digitalWrite(LIGHTS_RELAY_PIN, HIGH);
     data->lights = OFF;
   }
 }
@@ -131,10 +135,11 @@ void sendRadioMessage(String message) {
 
 void setup() {
   // put your setup code here, to run once:
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-  pinMode(doorSensorPin, INPUT_PULLUP);
-  pinMode(relayPin, OUTPUT);
+  pinMode(NRF_TRIG_PIN, OUTPUT);
+  pinMode(NRF_echo_PIN, INPUT);
+  pinMode(DOOR_MAG_PIN, INPUT_PULLUP);
+  pinMode(LIGHTS_RELAY_PIN, OUTPUT);
+  pinMode(DHT_PIN, INPUT);
   // pinMode(lightButtonPin, INPUT_PULLUP);
   Serial.begin(9600);
   radio.begin();
@@ -145,25 +150,27 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  digitalWrite(trigPin, LOW);
+  digitalWrite(NRF_TRIG_PIN, LOW);
   delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
+  digitalWrite(NRF_TRIG_PIN, HIGH);
   delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  duration = pulseIn(echoPin, HIGH);
+  digitalWrite(NRF_TRIG_PIN, LOW);
+  duration = pulseIn(NRF_echo_PIN, HIGH);
   distance = (duration * .0343) / 2;
   Serial.print("Distance: ");
   Serial.println(distance);
 
-  doorState = digitalRead(doorSensorPin);
+  doorState = digitalRead(DOOR_MAG_PIN);
   // lightButtonState = digitalRead(lightButtonPin);
+
+  int dht11Values = DHT11.read(DHT_PIN);
 
   struct garageData g1;
   g1.distance = (int)distance;
   g1.isCarInGarage = NO;
   g1.door = doorState == HIGH ? OPEN : CLOSED;
-  g1.temperature = 40;
-  g1.humidity = 20;
+  g1.temperature = DHT11.temperature;
+  g1.humidity = DHT11.humidity;
 
   if (distance < carDistanceCm) {
     // car is in the garage
