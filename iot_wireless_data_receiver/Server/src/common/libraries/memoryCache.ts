@@ -24,3 +24,7 @@ export const putToMemoryCache = (key: string, value: any): void => {
 export const getFromMemoryCache = (key: string): null | any => {
   return memCache.get(key);
 };
+
+export const CACHE_ID = {
+  lastRecordedTime: 'lastRecordedTime',
+};

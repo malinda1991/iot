@@ -9,4 +9,5 @@ import garageMonitor from '@/services/garage/garageMonitor';
 export const startupOperations = () => {
   garageMonitor.invokeMonitor();
   garageMonitor.invokeGarageDataSender();
+  garageMonitor.invokeRadioEntityAvailabilityCheck();
 };
