@@ -6,7 +6,7 @@
 dht11 DHT11;
 
 const int NRF_TRIG_PIN = 9;
-const int NRF_echo_PIN = 10;
+const int NRF_ECHO_PIN = 10;
 const int DOOR_MAG_PIN = 3;
 const int LIGHTS_RELAY_PIN = 4;
 const int DHT_PIN = 5;
@@ -136,7 +136,7 @@ void sendRadioMessage(String message) {
 void setup() {
   // put your setup code here, to run once:
   pinMode(NRF_TRIG_PIN, OUTPUT);
-  pinMode(NRF_echo_PIN, INPUT);
+  pinMode(NRF_ECHO_PIN, INPUT);
   pinMode(DOOR_MAG_PIN, INPUT_PULLUP);
   pinMode(LIGHTS_RELAY_PIN, OUTPUT);
   pinMode(DHT_PIN, INPUT);
@@ -155,7 +155,7 @@ void loop() {
   digitalWrite(NRF_TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(NRF_TRIG_PIN, LOW);
-  duration = pulseIn(NRF_echo_PIN, HIGH);
+  duration = pulseIn(NRF_ECHO_PIN, HIGH);
   distance = (duration * .0343) / 2;
   Serial.print("Distance: ");
   Serial.println(distance);
