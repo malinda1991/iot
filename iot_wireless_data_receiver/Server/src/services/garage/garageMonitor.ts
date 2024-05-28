@@ -1,7 +1,8 @@
 import homeAssistant, { SaveDataWebhookRequest } from '@/common/libraries/homeAssistant';
-import { getFromMemoryCache, putToMemoryCache } from '@/common/libraries/memoryCache';
+import { getFromMemoryCache, putToMemoryCache, CACHE_ID } from '@/common/libraries/memoryCache';
 import serialPort from '@/common/libraries/serialPort';
 import { garageData } from '@/common/utils/mappings';
+import { translate } from '@/common/libraries/i18n';
 
 const garageDataSenderParams: {
   intervalRef: NodeJS.Timeout | null;
@@ -9,6 +10,14 @@ const garageDataSenderParams: {
 } = {
   intervalRef: null,
   intervalPeriod: 20000,
+};
+
+const radioEntityTrackerParams: {
+  intervalRef: NodeJS.Timeout | null;
+  intervalPeriod: number;
+} = {
+  intervalRef: null,
+  intervalPeriod: 3000,
 };
 
 const {
@@ -104,6 +113,8 @@ const invokeMonitor = async () => {
           putToMemoryCache(flag, translatedData);
         }
       }
+
+      recordLastPayloadReceivedEvent(flag);
     });
   });
 };
@@ -124,7 +135,38 @@ const invokeGarageDataSender = async () => {
   garageDataSenderParams.intervalRef = setInterval(callback, garageDataSenderParams.intervalPeriod);
 };
 
+const recordLastPayloadReceivedEvent = (entityId: string) => {
+  const dataObjFromCache = getFromMemoryCache(CACHE_ID.lastRecordedTime) || {};
+  dataObjFromCache[entityId] = Date.now();
+  putToMemoryCache(CACHE_ID.lastRecordedTime, dataObjFromCache);
+};
+
+const invokeRadioEntityAvailabilityCheck = () => {
+  console.log('invoked Radio entity availabilty check');
+  const alertThresholdMilliSeconds: number = 5000;
+  const callback = () => {
+    const dataObjFromCache = getFromMemoryCache(CACHE_ID.lastRecordedTime) || null;
+    if (dataObjFromCache) {
+      const currentTimeInMilliSeconds = Date.now();
+      const entities = Object.keys(dataObjFromCache);
+      entities.forEach((entityId: string) => {
+        const lastRecordedTime = dataObjFromCache[entityId];
+        if (lastRecordedTime) {
+          // has a last recorded time in the memory
+          if (currentTimeInMilliSeconds - lastRecordedTime > alertThresholdMilliSeconds) {
+            // has not received data than the alert threshold time
+            console.log(`*****${entityId} is not available`);
+          }
+        }
+      });
+    }
+  };
+
+  radioEntityTrackerParams.intervalRef = setInterval(callback, radioEntityTrackerParams.intervalPeriod);
+};
+
 export default {
   invokeMonitor,
   invokeGarageDataSender,
+  invokeRadioEntityAvailabilityCheck,
 };
