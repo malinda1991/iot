@@ -2,6 +2,8 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <dht11.h>
+#include "CommonParams.h"
+#include "DoorSensor.h"
 
 dht11 DHT11;
 
@@ -20,6 +22,8 @@ float duration, distance;
 int doorState, lightButtonState, aqSensorData, dhtState;
 // bool garageLights = false;
 
+DoorSensor garageDoor = DoorSensor(DOOR_MAG_PIN);
+
 RF24 radio(7, 8);  // CE, CSN
 
 const byte GARAGE_RF_CHANNEL[6] = "G1083";
@@ -32,20 +36,7 @@ const String GARAGE_ID = "G1";
 
 // ------------------ should put in common----------
 const String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-enum CarInGarage {
-  NO,
-  YES
-};
 
-enum GarageDoor {
-  OPEN,
-  CLOSED
-};
-
-enum GarageLights {
-  ON,
-  OFF
-};
 
 struct GarageData {
   int distance;
@@ -144,7 +135,7 @@ void setup() {
   // put your setup code here, to run once:
   pinMode(NRF_TRIG_PIN, OUTPUT);
   pinMode(NRF_ECHO_PIN, INPUT);
-  pinMode(DOOR_MAG_PIN, INPUT_PULLUP);
+  garageDoor.initialize();
   pinMode(LIGHTS_RELAY_PIN, OUTPUT);
   pinMode(DHT_PIN, INPUT);
   pinMode(MQ_AIR_QUALITY_PIN, INPUT);
@@ -168,7 +159,6 @@ void loop() {
   Serial.print("Distance: ");
   Serial.println(distance);
 
-  doorState = digitalRead(DOOR_MAG_PIN);
   // lightButtonState = digitalRead(lightButtonPin);
 
   dhtState = DHT11.read(DHT_PIN);
@@ -177,7 +167,7 @@ void loop() {
   struct GarageData g1;
   g1.distance = (int)distance;
   g1.isCarInGarage = NO;
-  g1.door = doorState == HIGH ? OPEN : CLOSED;
+  g1.door = garageDoor.getDoorState();
   g1.temperature = DHT11.temperature;
   g1.humidity = DHT11.humidity;
   g1.airQuality = aqSensorData;
