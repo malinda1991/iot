@@ -1,14 +1,12 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-#include <dht11.h>
 #include "CommonParams.h"
 #include "DoorSensor.h"
+#include "DhtSensor.h"
 
-dht11 DHT11;
-
-const int NRF_TRIG_PIN = 9;
-const int NRF_ECHO_PIN = 10;
+const int US_TRIG_PIN = 9;
+const int US_ECHO_PIN = 10;
 const int DOOR_MAG_PIN = 3;
 const int LIGHTS_RELAY_PIN = 4;
 const int DHT_PIN = 5;
@@ -19,20 +17,21 @@ const int carDistanceCm = 30;
 const int LOOP_DELAY = 2000;
 
 float duration, distance;
-int doorState, lightButtonState, aqSensorData, dhtState;
+int doorState, lightButtonState, aqSensorData;
 // bool garageLights = false;
 
 DoorSensor garageDoor = DoorSensor(DOOR_MAG_PIN);
+DhtSensor garageDhtSensor = DhtSensor(DHT_PIN);
 
 RF24 radio(7, 8);  // CE, CSN
 
-const byte GARAGE_RF_CHANNEL[6] = "G1083";
+// const byte GARAGE_RF_CHANNEL[6] = "G1083";
 const int rfPayloadBytesLimit = 32;  // NRF byte limit is 32
-const char SEPERATOR = "_";
+const String SEPERATOR = "!";
 const int reservedBytes = 2;  // for the msg index values and seperators
 const int msgBodyBytes = rfPayloadBytesLimit - reservedBytes;
 
-const String GARAGE_ID = "G1";
+// const String GARAGE_ID = "G1";
 
 // ------------------ should put in common----------
 const String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -133,11 +132,11 @@ void sendRadioMessage(String message) {
 
 void setup() {
   // put your setup code here, to run once:
-  pinMode(NRF_TRIG_PIN, OUTPUT);
-  pinMode(NRF_ECHO_PIN, INPUT);
+  pinMode(US_TRIG_PIN, OUTPUT);
+  pinMode(US_ECHO_PIN, INPUT);
   garageDoor.initialize();
+  garageDhtSensor.initialize();
   pinMode(LIGHTS_RELAY_PIN, OUTPUT);
-  pinMode(DHT_PIN, INPUT);
   pinMode(MQ_AIR_QUALITY_PIN, INPUT);
   // pinMode(lightButtonPin, INPUT_PULLUP);
   Serial.begin(9600);
@@ -149,27 +148,27 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  digitalWrite(NRF_TRIG_PIN, LOW);
+  digitalWrite(US_TRIG_PIN, LOW);
   delayMicroseconds(2);
-  digitalWrite(NRF_TRIG_PIN, HIGH);
+  digitalWrite(US_TRIG_PIN, HIGH);
   delayMicroseconds(10);
-  digitalWrite(NRF_TRIG_PIN, LOW);
-  duration = pulseIn(NRF_ECHO_PIN, HIGH);
+  digitalWrite(US_TRIG_PIN, LOW);
+  duration = pulseIn(US_ECHO_PIN, HIGH);
   distance = (duration * .0343) / 2;
   Serial.print("Distance: ");
   Serial.println(distance);
 
   // lightButtonState = digitalRead(lightButtonPin);
 
-  dhtState = DHT11.read(DHT_PIN);
+  garageDhtSensor.updateSensorData();
   aqSensorData = analogRead(MQ_AIR_QUALITY_PIN);
 
   struct GarageData g1;
   g1.distance = (int)distance;
   g1.isCarInGarage = NO;
   g1.door = garageDoor.getDoorState();
-  g1.temperature = DHT11.temperature;
-  g1.humidity = DHT11.humidity;
+  g1.temperature = garageDhtSensor.getTemperature();
+  g1.humidity = garageDhtSensor.getHumidity();
   g1.airQuality = aqSensorData;
 
   if (distance < carDistanceCm) {
