@@ -4,7 +4,10 @@
 #include "CommonParams.h"
 #include "DoorSensor.h"
 #include "DhtSensor.h"
+#include "NRF24L01Transceiver.h"
 
+const int NRF_CE_PIN = 7;
+const int NRF_CSN_PIN = 8;
 const int US_TRIG_PIN = 9;
 const int US_ECHO_PIN = 10;
 const int DOOR_MAG_PIN = 3;
@@ -22,19 +25,17 @@ int doorState, lightButtonState, aqSensorData;
 
 DoorSensor garageDoor = DoorSensor(DOOR_MAG_PIN);
 DhtSensor garageDhtSensor = DhtSensor(DHT_PIN);
+NRF24L01Transceiver radioTransmitter = NRF24L01Transceiver(
+  NRF_CE_PIN,
+  NRF_CSN_PIN,
+  GARAGE_RF_CHANNEL,
+  NULL,
+  true,
+  RF24_PA_MIN);
 
-RF24 radio(7, 8);  // CE, CSN
-
-// const byte GARAGE_RF_CHANNEL[6] = "G1083";
-const int rfPayloadBytesLimit = 32;  // NRF byte limit is 32
 const String SEPERATOR = "!";
 const int reservedBytes = 2;  // for the msg index values and seperators
-const int msgBodyBytes = rfPayloadBytesLimit - reservedBytes;
-
-// const String GARAGE_ID = "G1";
-
-// ------------------ should put in common----------
-const String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const int msgBodyBytes = nrfPayloadBytesLimit - reservedBytes;
 
 
 struct GarageData {
@@ -67,12 +68,10 @@ void operateGarageLights(GarageLights lights, GarageData *data) {
 **/
 void broadcastData(GarageData g1) {
 
-  char message[rfPayloadBytesLimit] = "";
+  char message[nrfPayloadBytesLimit] = "";
   message[0] = g1.isCarInGarage == YES ? "Y" : "N";
   message[1] = ",";
   message[2] = g1.door == OPEN ? "O" : "C";
-
-  Serial.println(message);
 
   for (int x = 1; x <= 6; x++) {
     // iterations the number of messages needs to be sent
@@ -112,22 +111,12 @@ void broadcastData(GarageData g1) {
     }
 
     /**
-* Message anatomy "{Garage ID}{seperator}{Data Key}{seperator}{Data Value}"
-**/
+    * Message anatomy "{Garage ID}{seperator}{Data Key}{seperator}{Data Value}"
+    **/
     String message = GARAGE_ID + SEPERATOR + key + SEPERATOR + value;
     Serial.println(message);
-    sendRadioMessage(message);
+    radioTransmitter.sendRadioMessage(message);
   }
-}
-
-void sendRadioMessage(String message) {
-  char radioMessage[rfPayloadBytesLimit] = "";
-  for (int x = 0; x < message.length(); x++) {
-    radioMessage[x] = message[x];
-  }
-  radio.write(&radioMessage, sizeof(radioMessage));
-  Serial.println(radioMessage);
-  Serial.println("Radio message sent!");
 }
 
 void setup() {
@@ -140,10 +129,7 @@ void setup() {
   pinMode(MQ_AIR_QUALITY_PIN, INPUT);
   // pinMode(lightButtonPin, INPUT_PULLUP);
   Serial.begin(9600);
-  radio.begin();
-  radio.openWritingPipe(GARAGE_RF_CHANNEL);
-  radio.setPALevel(RF24_PA_MIN);
-  radio.stopListening();
+  radioTransmitter.initialize();
 }
 
 void loop() {
