@@ -6,6 +6,7 @@
 #include "DhtSensor.h"
 #include "NRF24L01Transceiver.h"
 #include "UltrasonicSensor.h"
+#include "AirQualitySensor.h"
 
 const int NRF_CE_PIN = 7;
 const int NRF_CSN_PIN = 8;
@@ -20,7 +21,7 @@ const int MQ_AIR_QUALITY_PIN = A2;
 const int carDistanceCm = 30;
 const int LOOP_DELAY = 2000;
 
-int lightButtonState, aqSensorData;
+int lightButtonState;
 // bool garageLights = false;
 
 DoorSensor garageDoor = DoorSensor(DOOR_MAG_PIN);
@@ -33,6 +34,7 @@ NRF24L01Transceiver radioTransmitter = NRF24L01Transceiver(
   true,
   RF24_PA_MIN);
 UltrasonicSensor usSensor = UltrasonicSensor(US_TRIG_PIN, US_ECHO_PIN);
+AirQualitySensor aqSensor = AirQualitySensor(MQ_AIR_QUALITY_PIN);
 
 const String SEPERATOR = "!";
 const int reservedBytes = 2;  // for the msg index values and seperators
@@ -40,7 +42,7 @@ const int msgBodyBytes = nrfPayloadBytesLimit - reservedBytes;
 
 
 struct GarageData {
-  int distance;
+  float distance;
   CarInGarage isCarInGarage;
   GarageDoor door;
   int temperature;
@@ -68,12 +70,6 @@ void operateGarageLights(GarageLights lights, GarageData *data) {
 * @author Sandun Munasinghe
 **/
 void broadcastData(GarageData g1) {
-
-  char message[nrfPayloadBytesLimit] = "";
-  message[0] = g1.isCarInGarage == YES ? "Y" : "N";
-  message[1] = ",";
-  message[2] = g1.door == OPEN ? "O" : "C";
-
   for (int x = 1; x <= 6; x++) {
     // iterations the number of messages needs to be sent
     String key = "";
@@ -125,7 +121,7 @@ void setup() {
   garageDoor.initialize();
   garageDhtSensor.initialize();
   pinMode(LIGHTS_RELAY_PIN, OUTPUT);
-  pinMode(MQ_AIR_QUALITY_PIN, INPUT);
+  aqSensor.initialize();
   // pinMode(lightButtonPin, INPUT_PULLUP);
   Serial.begin(9600);
   radioTransmitter.initialize();
@@ -137,15 +133,15 @@ void loop() {
 
   garageDhtSensor.updateSensorData();
   usSensor.updateSensorData();
-  aqSensorData = analogRead(MQ_AIR_QUALITY_PIN);
+  aqSensor.updateSensorData();
 
   struct GarageData g1;
-  g1.distance = (int)usSensor.getDistance();
+  g1.distance = usSensor.getDistance();
   g1.isCarInGarage = NO;
   g1.door = garageDoor.getDoorState();
   g1.temperature = garageDhtSensor.getTemperature();
   g1.humidity = garageDhtSensor.getHumidity();
-  g1.airQuality = aqSensorData;
+  g1.airQuality = aqSensor.getAirQualityLevel();
 
   if (g1.distance < carDistanceCm) {
     // car is in the garage
