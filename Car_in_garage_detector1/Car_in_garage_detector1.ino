@@ -5,6 +5,7 @@
 #include "DoorSensor.h"
 #include "DhtSensor.h"
 #include "NRF24L01Transceiver.h"
+#include "UltrasonicSensor.h"
 
 const int NRF_CE_PIN = 7;
 const int NRF_CSN_PIN = 8;
@@ -19,8 +20,7 @@ const int MQ_AIR_QUALITY_PIN = A2;
 const int carDistanceCm = 30;
 const int LOOP_DELAY = 2000;
 
-float duration, distance;
-int doorState, lightButtonState, aqSensorData;
+int lightButtonState, aqSensorData;
 // bool garageLights = false;
 
 DoorSensor garageDoor = DoorSensor(DOOR_MAG_PIN);
@@ -32,6 +32,7 @@ NRF24L01Transceiver radioTransmitter = NRF24L01Transceiver(
   NULL,
   true,
   RF24_PA_MIN);
+UltrasonicSensor usSensor = UltrasonicSensor(US_TRIG_PIN, US_ECHO_PIN);
 
 const String SEPERATOR = "!";
 const int reservedBytes = 2;  // for the msg index values and seperators
@@ -120,9 +121,7 @@ void broadcastData(GarageData g1) {
 }
 
 void setup() {
-  // put your setup code here, to run once:
-  pinMode(US_TRIG_PIN, OUTPUT);
-  pinMode(US_ECHO_PIN, INPUT);
+  usSensor.initialize();
   garageDoor.initialize();
   garageDhtSensor.initialize();
   pinMode(LIGHTS_RELAY_PIN, OUTPUT);
@@ -133,31 +132,22 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  digitalWrite(US_TRIG_PIN, LOW);
-  delayMicroseconds(2);
-  digitalWrite(US_TRIG_PIN, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(US_TRIG_PIN, LOW);
-  duration = pulseIn(US_ECHO_PIN, HIGH);
-  distance = (duration * .0343) / 2;
-  Serial.print("Distance: ");
-  Serial.println(distance);
 
   // lightButtonState = digitalRead(lightButtonPin);
 
   garageDhtSensor.updateSensorData();
+  usSensor.updateSensorData();
   aqSensorData = analogRead(MQ_AIR_QUALITY_PIN);
 
   struct GarageData g1;
-  g1.distance = (int)distance;
+  g1.distance = (int)usSensor.getDistance();
   g1.isCarInGarage = NO;
   g1.door = garageDoor.getDoorState();
   g1.temperature = garageDhtSensor.getTemperature();
   g1.humidity = garageDhtSensor.getHumidity();
   g1.airQuality = aqSensorData;
 
-  if (distance < carDistanceCm) {
+  if (g1.distance < carDistanceCm) {
     // car is in the garage
     g1.isCarInGarage = YES;
   }
