@@ -1,6 +1,8 @@
 #include "Arduino.h"
 #include "UltrasonicSensor.h"
 
+const float SPEED_OF_SOUND = 0.0344;
+
 UltrasonicSensor::UltrasonicSensor(int triggerPin, int echoPin) {
   this->triggerPin = triggerPin;
   this->echoPin = echoPin;
@@ -20,7 +22,7 @@ void UltrasonicSensor::updateSensorData() {
   delayMicroseconds(10);
   digitalWrite(this->triggerPin, LOW);
   this->duration = pulseIn(this->echoPin, HIGH);
-  this->distance = (this->duration * .0343) / 2;
+  this->distance = (this->duration * SPEED_OF_SOUND) / 2;
   Serial.print("Distance: ");
   Serial.println(distance);
 }
