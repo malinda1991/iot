@@ -2,7 +2,7 @@
 
 RelayModule::RelayModule(int pin) {
   this->pin = pin;
-  this->isTurnedOn = false;
+  this->status = RelayStatus::on;
 }
 
 void RelayModule::initialize() {
@@ -11,10 +11,10 @@ void RelayModule::initialize() {
 
 void RelayModule::turnOn(){
   digitalWrite(this->pin, LOW);  // LOW means on
-  this->isTurnedOn = true;
+  this->status = RelayStatus::on;
 }
 
 void RelayModule::turnOff(){
   digitalWrite(this->pin, HIGH);  // HIGH means off
-  this->isTurnedOn = false;
+  this->status = RelayStatus::off;
 }

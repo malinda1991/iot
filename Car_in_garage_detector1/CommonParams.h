@@ -6,11 +6,6 @@ enum GarageDoor {
   CLOSED
 };
 
-enum CarInGarage {
-  NO,
-  YES
-};
-
 enum GarageLights {
   ON,
   OFF

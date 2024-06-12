@@ -4,10 +4,15 @@
 #include <Arduino.h>
 #include "CommonParams.h"
 
+enum RelayStatus {
+  on,
+  off
+};
+
 class RelayModule{
   private:
     int pin;
-    bool isTurnedOn;
+    RelayStatus status;
 
   public:
     RelayModule(int pin);

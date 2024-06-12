@@ -40,13 +40,13 @@ const int msgBodyBytes = nrfPayloadBytesLimit - reservedBytes;
 
 
 struct GarageData {
-  float distance;
-  CarInGarage isCarInGarage;
+  float carDistance;
   GarageDoor door;
   int temperature;
   int humidity;
   GarageLights lights;
   int airQuality;
+  float batteryLevel;
 };
 
 void operateGarageLights(GarageLights lights, GarageData *data) {
@@ -68,15 +68,15 @@ void operateGarageLights(GarageLights lights, GarageData *data) {
 * @author Sandun Munasinghe
 **/
 void broadcastData(GarageData g1) {
-  for (int x = 1; x <= 6; x++) {
+  for (int x = 1; x <= 7; x++) {
     // iterations the number of messages needs to be sent
     String key = "";
     String value = "";
     switch (x) {
       case 1:
-        // Is car in the garage
-        key = "car";
-        value = g1.isCarInGarage == YES ? "Y" : "N";
+        // car distance in the garage
+        key = "carDist";
+        value = g1.carDistance;
         break;
       case 2:
         // Garage door
@@ -102,6 +102,11 @@ void broadcastData(GarageData g1) {
         // air quality
         key = "AQ";
         value = g1.airQuality;
+        break;
+      case 7:
+        // Battery level
+        key = "btty";
+        value = g1.batteryLevel;
         break;
     }
 
@@ -130,17 +135,12 @@ void loop() {
   aqSensor.updateSensorData();
 
   struct GarageData g1;
-  g1.distance = usSensor.getDistance();
-  g1.isCarInGarage = NO;
+  g1.carDistance = usSensor.getDistance();
   g1.door = garageDoor.getDoorState();
   g1.temperature = garageDhtSensor.getTemperature();
   g1.humidity = garageDhtSensor.getHumidity();
   g1.airQuality = aqSensor.getAirQualityLevel();
-
-  if (g1.distance < carDistanceCm) {
-    // car is in the garage
-    g1.isCarInGarage = YES;
-  }
+  g1.batteryLevel = 52.5;
 
   if (g1.door == OPEN) {
     // // Turn On the lights
