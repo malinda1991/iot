@@ -7,6 +7,7 @@
 #include "NRF24L01Transceiver.h"
 #include "UltrasonicSensor.h"
 #include "AirQualitySensor.h"
+#include "RelayModule.h"
 
 const int NRF_CE_PIN = 7;
 const int NRF_CSN_PIN = 8;
@@ -16,13 +17,9 @@ const int DOOR_MAG_PIN = 3;
 const int LIGHTS_RELAY_PIN = 4;
 const int DHT_PIN = 5;
 const int MQ_AIR_QUALITY_PIN = A2;
-// const int lightButtonPin = 6;
 
 const int carDistanceCm = 30;
 const int LOOP_DELAY = 2000;
-
-int lightButtonState;
-// bool garageLights = false;
 
 DoorSensor garageDoor = DoorSensor(DOOR_MAG_PIN);
 DhtSensor garageDhtSensor = DhtSensor(DHT_PIN);
@@ -35,6 +32,7 @@ NRF24L01Transceiver radioTransmitter = NRF24L01Transceiver(
   RF24_PA_MIN);
 UltrasonicSensor usSensor = UltrasonicSensor(US_TRIG_PIN, US_ECHO_PIN);
 AirQualitySensor aqSensor = AirQualitySensor(MQ_AIR_QUALITY_PIN);
+RelayModule lightsRelay = RelayModule(LIGHTS_RELAY_PIN);
 
 const String SEPERATOR = "!";
 const int reservedBytes = 2;  // for the msg index values and seperators
@@ -54,11 +52,11 @@ struct GarageData {
 void operateGarageLights(GarageLights lights, GarageData *data) {
   if (lights == ON) {
     // Turn On the 230V relay
-    digitalWrite(LIGHTS_RELAY_PIN, LOW);  // LOW means on
+    lightsRelay.turnOn();
     data->lights = ON;
   } else {
     // Turn Off the 230V relay
-    digitalWrite(LIGHTS_RELAY_PIN, HIGH);
+    lightsRelay.turnOff();
     data->lights = OFF;
   }
 }
@@ -120,17 +118,13 @@ void setup() {
   usSensor.initialize();
   garageDoor.initialize();
   garageDhtSensor.initialize();
-  pinMode(LIGHTS_RELAY_PIN, OUTPUT);
+  lightsRelay.initialize();
   aqSensor.initialize();
-  // pinMode(lightButtonPin, INPUT_PULLUP);
   Serial.begin(9600);
   radioTransmitter.initialize();
 }
 
 void loop() {
-
-  // lightButtonState = digitalRead(lightButtonPin);
-
   garageDhtSensor.updateSensorData();
   usSensor.updateSensorData();
   aqSensor.updateSensorData();
@@ -155,15 +149,6 @@ void loop() {
     // // Turn Off the lights
     operateGarageLights(OFF, &g1);
   }
-
-  // if (lightButtonState == HIGH) {
-  //   // light button pressed
-  //   operateGarageLights(ON, &g1);
-  // } else {
-  //   // turn LED off:
-  //   operateGarageLights(OFF, &g1);
-  // }
-
 
   broadcastData(g1);
   delay(LOOP_DELAY);
