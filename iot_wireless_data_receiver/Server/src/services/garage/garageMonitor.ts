@@ -85,9 +85,11 @@ const checkForStateChanges = (dataObjFromCache: any, key: string, translatedData
 
 const invokeMonitor = async () => {
   serialPort.runScanner((data: string) => {
+    console.log('Scanning..');
     flagsToAccept.forEach((flag) => {
       if (data.includes(flag)) {
         // data string should be accepted
+        console.log(`${flag} data received`);
         const seperatedDataString = data.split(seperator);
 
         if (seperatedDataString[1] && seperatedDataString[2]) {
