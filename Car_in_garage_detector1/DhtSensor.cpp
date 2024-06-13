@@ -19,14 +19,14 @@ void DhtSensor::updateSensorData() {
 
 int DhtSensor::getTemperature() {
   if (this->DHT11.temperature) {
-    return this->DHT11.temperature;
+    return (float)this->DHT11.temperature;
   }
-  return 0;
+  return 0.0;
 }
 
 int DhtSensor::getHumidity(){
   if(this->DHT11.humidity){
-    return this->DHT11.humidity;
+    return (float)this->DHT11.humidity;
   }
-  return 0;
+  return 0.0;
 }

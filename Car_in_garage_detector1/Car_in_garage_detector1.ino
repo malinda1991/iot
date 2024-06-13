@@ -42,8 +42,8 @@ const int msgBodyBytes = nrfPayloadBytesLimit - reservedBytes;
 struct GarageData {
   float carDistance;
   GarageDoor door;
-  int temperature;
-  int humidity;
+  float temperature;
+  float humidity;
   GarageLights lights;
   int airQuality;
   float batteryLevel;
