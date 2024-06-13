@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  IOT-SERVER:
+    container_name: iot-server
+    image: iot-server:latest
+    environment:
+      - TZ=Asia/Colombo
+      - HOST="localhost"
+      - CORS_ORIGIN="http://localhost:*"
+      - COMMON_RATE_LIMIT_WINDOW_MS="1000"
+      - COMMON_RATE_LIMIT_MAX_REQUESTS="20"
+      - USB_PORT_ADDRESS='/dev/ttyACM0'
+      - BAUD_RATE=9600
+      - HA_WEBHOOK_BASE_URL="http://localhost:8123/api/webhook"
+      - HA_WEBHOOK_ID_NOTIFICATIONS="-zQfXDTZs_rwg5eLpbUV8MPRH"
+      - HA_WEBHOOK_ID_GARAGE_DATA="-0ZYEAalXupdVVdMzEABWUU7f"
+    # If you use host network mode, then no port mapping is required.
+    # This is the easiest way to use IPv6 networks.
+    #    privileged: true
+    network_mode: host
+    #    ports:
+    #      - 7000:7000
+    restart: always

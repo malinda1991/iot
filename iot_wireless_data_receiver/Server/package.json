@@ -16,7 +16,10 @@
     "test:dev": "vitest dev",
     "test:cov": "vitest run --coverage",
     "release": "semantic-release",
-    "prepare": "husky"
+    "prepare": "husky",
+    "container:build:armv7": "docker build --platform linux/arm/v7 -t iot-server:latest .",
+    "container:save" : "docker save -o ../iot-server-arm.tar iot-server:latest",
+    "container:load" : "docker load -i iot-server-arm.tar"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.0.0",
