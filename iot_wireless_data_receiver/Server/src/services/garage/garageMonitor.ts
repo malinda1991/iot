@@ -20,14 +20,11 @@ const radioEntityTrackerParams: {
   intervalPeriod: 3000,
 };
 
-const {
-  keys: garageKeys,
-  // values: garageValues,
-  flagsToAccept,
-  seperator,
-  getGarageKeyName,
-  getGarageValueName,
-} = garageData;
+const { CAR_DISTANCE_CM } = {
+  CAR_DISTANCE_CM: 30,
+};
+
+const { keys: garageKeys, flagsToAccept, seperator, getGarageKeyName, getGarageValueName } = garageData;
 
 const onStateChange = {
   garageDoor: (garageDoorState: string, data: SaveDataWebhookRequest) => {
@@ -83,6 +80,48 @@ const checkForStateChanges = (dataObjFromCache: any, key: string, translatedData
   }
 };
 
+const translateReceivedData = (flag: string, extractedData: { key: string; value: string }) => {
+  const dataObjFromCache = getFromMemoryCache(flag) || {};
+
+  const translatedData = {
+    id: flag,
+    ...dataObjFromCache,
+    [extractedData.key]: {
+      name: getGarageKeyName(extractedData),
+      value: getGarageValueName(extractedData),
+    },
+  };
+
+  switch (extractedData.key) {
+    case garageKeys.carDistance: {
+      // detect car availability
+      const carData = {
+        key: garageKeys.car,
+        value: 'N',
+      };
+
+      if (parseFloat(extractedData.value) < CAR_DISTANCE_CM) {
+        // car is in the garage
+        carData.value = 'Y';
+      }
+
+      translatedData[garageKeys.car] = {
+        name: getGarageKeyName(carData),
+        value: getGarageValueName(carData),
+      };
+      break;
+    }
+
+    default:
+      break;
+  }
+
+  return {
+    dataObjFromCache,
+    translatedData,
+  };
+};
+
 const invokeMonitor = async () => {
   serialPort.runScanner((data: string) => {
     console.log('Scanning..');
@@ -99,16 +138,7 @@ const invokeMonitor = async () => {
             value: seperatedDataString[2].replace('\r', ''),
           };
 
-          const dataObjFromCache = getFromMemoryCache(flag) || {};
-
-          const translatedData = {
-            id: flag,
-            ...dataObjFromCache,
-            [extractedData.key]: {
-              name: getGarageKeyName(extractedData),
-              value: getGarageValueName(extractedData),
-            },
-          };
+          const { translatedData, dataObjFromCache } = translateReceivedData(flag, extractedData);
 
           checkForStateChanges(dataObjFromCache, extractedData.key, translatedData);
 
