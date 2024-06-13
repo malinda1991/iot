@@ -98,8 +98,7 @@ const checkForStateChanges = (dataObjFromCache: any, key: string, translatedData
     }else{
       // logic if went same or above the threshold
       if(parseFloat(translatedValue) >= thresholdLimit && parseFloat(previousValue) < thresholdLimit){
-
-        console.log('------------------------translatedDataObj', translatedDataObj);
+        
         triggerCallback(`high (${translatedValue})`, translatedDataObj);
       }
     }
