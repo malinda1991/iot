@@ -19,8 +19,12 @@ export const putToMemoryCache = (key: string, value: any): void => {
 /**
  * Returns value from the memory which matches to the key
  * @param key id for the value
- * @returns the value matches to the key
+ * @returns the value matches to the key or null if not exists
  */
-export const getFromMemoryCache = (key: string): any => {
+export const getFromMemoryCache = (key: string): null | any => {
   return memCache.get(key);
+};
+
+export const CACHE_ID = {
+  lastRecordedTime: 'lastRecordedTime',
 };

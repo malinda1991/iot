@@ -10,7 +10,7 @@ import { SerialPort } from 'serialport';
 
 import { env } from '@/common/utils/envConfig';
 
-const { USB_PORT_ADDRESS, BAUD_RATE } = env;
+const { USB_PORT_ADDRESS, BAUD_RATE } = env.SERIAL_MONITOR;
 
 const port = new SerialPort({
   path: USB_PORT_ADDRESS,
