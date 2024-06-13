@@ -98,7 +98,7 @@ const checkForStateChanges = (dataObjFromCache: any, key: string, translatedData
     }else{
       // logic if went same or above the threshold
       if(parseFloat(translatedValue) >= thresholdLimit && parseFloat(previousValue) < thresholdLimit){
-        
+
         triggerCallback(`high (${translatedValue})`, translatedDataObj);
       }
     }
@@ -144,12 +144,11 @@ const translateReceivedData = (flag: string, extractedData: { key: string; value
       // detect car availability
       const carData = {
         key: garageKeys.car,
-        value: 'N',
+        value: 'N', // car is not in the garage
       };
 
       if (parseFloat(extractedData.value) < CAR_DISTANCE_CM) {
-        // car is in the garage
-        carData.value = 'Y';
+        carData.value = 'Y'; // car is in the garage
       }
 
       translatedData[garageKeys.car] = {
