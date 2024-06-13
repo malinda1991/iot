@@ -25,7 +25,10 @@ const parser = port.pipe(
 const runScanner = (dataCallback: any): void => {
   // Read the port data
   port.on('open', () => {
-    console.log('serial port open');
+    console.log('Serial port open');
+  });
+  port.on('error', (error) => {
+    console.log('Error on serial port', error);
   });
   parser.on('data', (data: string) => {
     dataCallback(data);

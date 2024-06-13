@@ -1,7 +1,7 @@
 FROM node:current-slim
 
 # Create app directory
-WORKDIR /usr/src/app
+WORKDIR /usr/src/iot-server
 
 # Copy package.json and package-lock.json
 COPY package*.json ./
@@ -15,8 +15,12 @@ COPY . .
 # Build the TypeScript files
 RUN npm run build
 
-# Expose port 8080
-EXPOSE 8080
+# set environment variables
+ENV NODE_ENV="production"
+ENV PORT="7000"
+
+# Expose port 7000
+EXPOSE 7000
 
 # Start the app
 CMD npm run start

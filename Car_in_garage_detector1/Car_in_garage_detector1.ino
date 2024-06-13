@@ -1,70 +1,62 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-#include <dht11.h>
+#include "CommonParams.h"
+#include "DoorSensor.h"
+#include "DhtSensor.h"
+#include "NRF24L01Transceiver.h"
+#include "UltrasonicSensor.h"
+#include "AirQualitySensor.h"
+#include "RelayModule.h"
 
-dht11 DHT11;
-
-const int NRF_TRIG_PIN = 9;
-const int NRF_ECHO_PIN = 10;
+const int NRF_CE_PIN = 7;
+const int NRF_CSN_PIN = 8;
+const int US_TRIG_PIN = 9;
+const int US_ECHO_PIN = 10;
 const int DOOR_MAG_PIN = 3;
 const int LIGHTS_RELAY_PIN = 4;
 const int DHT_PIN = 5;
 const int MQ_AIR_QUALITY_PIN = A2;
-// const int lightButtonPin = 6;
 
 const int carDistanceCm = 30;
 const int LOOP_DELAY = 2000;
 
-float duration, distance;
-int doorState, lightButtonState, aqSensorData, dhtState;
-// bool garageLights = false;
+DoorSensor garageDoor = DoorSensor(DOOR_MAG_PIN);
+DhtSensor garageDhtSensor = DhtSensor(DHT_PIN);
+NRF24L01Transceiver radioTransmitter = NRF24L01Transceiver(
+  NRF_CE_PIN,
+  NRF_CSN_PIN,
+  GARAGE_RF_CHANNEL,
+  NULL,
+  true,
+  RF24_PA_MIN);
+UltrasonicSensor usSensor = UltrasonicSensor(US_TRIG_PIN, US_ECHO_PIN);
+AirQualitySensor aqSensor = AirQualitySensor(MQ_AIR_QUALITY_PIN);
+RelayModule lightsRelay = RelayModule(LIGHTS_RELAY_PIN);
 
-RF24 radio(7, 8);  // CE, CSN
-
-const byte GARAGE_RF_CHANNEL[6] = "G1083";
-const int rfPayloadBytesLimit = 32;  // NRF byte limit is 32
-const char SEPERATOR = "_";
+const String SEPERATOR = "!";
 const int reservedBytes = 2;  // for the msg index values and seperators
-const int msgBodyBytes = rfPayloadBytesLimit - reservedBytes;
+const int msgBodyBytes = nrfPayloadBytesLimit - reservedBytes;
 
-const String GARAGE_ID = "G1";
-
-// ------------------ should put in common----------
-const String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-enum CarInGarage {
-  NO,
-  YES
-};
-
-enum GarageDoor {
-  OPEN,
-  CLOSED
-};
-
-enum GarageLights {
-  ON,
-  OFF
-};
 
 struct GarageData {
-  int distance;
-  CarInGarage isCarInGarage;
+  float carDistance;
   GarageDoor door;
-  int temperature;
-  int humidity;
+  float temperature;
+  float humidity;
   GarageLights lights;
   int airQuality;
+  float batteryLevel;
 };
 
 void operateGarageLights(GarageLights lights, GarageData *data) {
   if (lights == ON) {
     // Turn On the 230V relay
-    digitalWrite(LIGHTS_RELAY_PIN, LOW);  // LOW means on
+    lightsRelay.turnOn();
     data->lights = ON;
   } else {
     // Turn Off the 230V relay
-    digitalWrite(LIGHTS_RELAY_PIN, HIGH);
+    lightsRelay.turnOff();
     data->lights = OFF;
   }
 }
@@ -76,23 +68,15 @@ void operateGarageLights(GarageLights lights, GarageData *data) {
 * @author Sandun Munasinghe
 **/
 void broadcastData(GarageData g1) {
-
-  char message[rfPayloadBytesLimit] = "";
-  message[0] = g1.isCarInGarage == YES ? "Y" : "N";
-  message[1] = ",";
-  message[2] = g1.door == OPEN ? "O" : "C";
-
-  Serial.println(message);
-
-  for (int x = 1; x <= 6; x++) {
+  for (int x = 1; x <= 7; x++) {
     // iterations the number of messages needs to be sent
     String key = "";
     String value = "";
     switch (x) {
       case 1:
-        // Is car in the garage
-        key = "car";
-        value = g1.isCarInGarage == YES ? "Y" : "N";
+        // car distance in the garage
+        key = "carDist";
+        value = g1.carDistance;
         break;
       case 2:
         // Garage door
@@ -119,73 +103,44 @@ void broadcastData(GarageData g1) {
         key = "AQ";
         value = g1.airQuality;
         break;
+      case 7:
+        // Battery level
+        key = "btty";
+        value = g1.batteryLevel;
+        break;
     }
 
     /**
-* Message anatomy "{Garage ID}{seperator}{Data Key}{seperator}{Data Value}"
-**/
+    * Message anatomy "{Garage ID}{seperator}{Data Key}{seperator}{Data Value}"
+    **/
     String message = GARAGE_ID + SEPERATOR + key + SEPERATOR + value;
     Serial.println(message);
-    sendRadioMessage(message);
+    radioTransmitter.sendRadioMessage(message);
   }
-}
-
-void sendRadioMessage(String message) {
-  char radioMessage[rfPayloadBytesLimit] = "";
-  for (int x = 0; x < message.length(); x++) {
-    radioMessage[x] = message[x];
-  }
-  radio.write(&radioMessage, sizeof(radioMessage));
-  Serial.println(radioMessage);
-  Serial.println("Radio message sent!");
 }
 
 void setup() {
-  // put your setup code here, to run once:
-  pinMode(NRF_TRIG_PIN, OUTPUT);
-  pinMode(NRF_ECHO_PIN, INPUT);
-  pinMode(DOOR_MAG_PIN, INPUT_PULLUP);
-  pinMode(LIGHTS_RELAY_PIN, OUTPUT);
-  pinMode(DHT_PIN, INPUT);
-  pinMode(MQ_AIR_QUALITY_PIN, INPUT);
-  // pinMode(lightButtonPin, INPUT_PULLUP);
+  usSensor.initialize();
+  garageDoor.initialize();
+  garageDhtSensor.initialize();
+  lightsRelay.initialize();
+  aqSensor.initialize();
   Serial.begin(9600);
-  radio.begin();
-  radio.openWritingPipe(GARAGE_RF_CHANNEL);
-  radio.setPALevel(RF24_PA_MIN);
-  radio.stopListening();
+  radioTransmitter.initialize();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  digitalWrite(NRF_TRIG_PIN, LOW);
-  delayMicroseconds(2);
-  digitalWrite(NRF_TRIG_PIN, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(NRF_TRIG_PIN, LOW);
-  duration = pulseIn(NRF_ECHO_PIN, HIGH);
-  distance = (duration * .0343) / 2;
-  Serial.print("Distance: ");
-  Serial.println(distance);
-
-  doorState = digitalRead(DOOR_MAG_PIN);
-  // lightButtonState = digitalRead(lightButtonPin);
-
-  dhtState = DHT11.read(DHT_PIN);
-  aqSensorData = analogRead(MQ_AIR_QUALITY_PIN);
+  garageDhtSensor.updateSensorData();
+  usSensor.updateSensorData();
+  aqSensor.updateSensorData();
 
   struct GarageData g1;
-  g1.distance = (int)distance;
-  g1.isCarInGarage = NO;
-  g1.door = doorState == HIGH ? OPEN : CLOSED;
-  g1.temperature = DHT11.temperature;
-  g1.humidity = DHT11.humidity;
-  g1.airQuality = aqSensorData;
-
-  if (distance < carDistanceCm) {
-    // car is in the garage
-    g1.isCarInGarage = YES;
-  }
+  g1.carDistance = usSensor.getDistance();
+  g1.door = garageDoor.getDoorState();
+  g1.temperature = garageDhtSensor.getTemperature();
+  g1.humidity = garageDhtSensor.getHumidity();
+  g1.airQuality = aqSensor.getAirQualityLevel();
+  g1.batteryLevel = 52.5;
 
   if (g1.door == OPEN) {
     // // Turn On the lights
@@ -194,15 +149,6 @@ void loop() {
     // // Turn Off the lights
     operateGarageLights(OFF, &g1);
   }
-
-  // if (lightButtonState == HIGH) {
-  //   // light button pressed
-  //   operateGarageLights(ON, &g1);
-  // } else {
-  //   // turn LED off:
-  //   operateGarageLights(OFF, &g1);
-  // }
-
 
   broadcastData(g1);
   delay(LOOP_DELAY);

@@ -27,4 +27,5 @@ export const getFromMemoryCache = (key: string): null | any => {
 
 export const CACHE_ID = {
   lastRecordedTime: 'lastRecordedTime',
+  status: 'status',
 };
