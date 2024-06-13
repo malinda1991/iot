@@ -92,6 +92,8 @@ const translateReceivedData = (flag: string, extractedData: { key: string; value
     },
   };
 
+  let extractedKey = extractedData.key;
+
   switch (extractedData.key) {
     case garageKeys.carDistance: {
       // detect car availability
@@ -109,6 +111,7 @@ const translateReceivedData = (flag: string, extractedData: { key: string; value
         name: getGarageKeyName(carData),
         value: getGarageValueName(carData),
       };
+      extractedKey = garageKeys.car;
       break;
     }
 
@@ -119,12 +122,13 @@ const translateReceivedData = (flag: string, extractedData: { key: string; value
   return {
     dataObjFromCache,
     translatedData,
+    extractedKey
   };
 };
 
 const invokeMonitor = async () => {
   serialPort.runScanner((data: string) => {
-    console.log('Scanning..');
+    console.log('Scanning..', data);
     flagsToAccept.forEach((flag) => {
       if (data.includes(flag)) {
         // data string should be accepted
@@ -138,15 +142,15 @@ const invokeMonitor = async () => {
             value: seperatedDataString[2].replace('\r', ''),
           };
 
-          const { translatedData, dataObjFromCache } = translateReceivedData(flag, extractedData);
+          const { translatedData, dataObjFromCache, extractedKey } = translateReceivedData(flag, extractedData);
 
-          checkForStateChanges(dataObjFromCache, extractedData.key, translatedData);
+          checkForStateChanges(dataObjFromCache, extractedKey, translatedData);
 
           putToMemoryCache(flag, translatedData);
         }
-      }
 
-      recordLastPayloadReceivedEvent(flag);
+        recordLastPayloadReceivedEvent(flag);
+      }
     });
   });
 };
