@@ -88,20 +88,19 @@ const checkForStateChanges = (dataObjFromCache: any, key: string, translatedData
     }
   };
   const valueThresholdCheck = (triggerCallback: any, thresholdLimit : number = 0, thresholdDirection : ThresholdDirection = ThresholdDirection.HIGHER) => {
-    if (dataObjFromCache[key]?.value !== undefined) {
-      // the state is not undefined
-      if(thresholdDirection == ThresholdDirection.LOWER){
-        // logic if went same or below the threshold
-        if(parseFloat(translatedValue) <= thresholdLimit && parseFloat(dataObjFromCache[key]?.value) <= thresholdLimit){
-  
-          triggerCallback(translatedValue, translatedDataObj);
-        }
-      }else{
-        // logic if went same or above the threshold
-        if(parseFloat(translatedValue) >= thresholdLimit && parseFloat(dataObjFromCache[key]?.value) >= thresholdLimit){
-  
-          triggerCallback(translatedValue, translatedDataObj);
-        }
+    const previousValue = dataObjFromCache[key]?.value || 0;
+    if(thresholdDirection == ThresholdDirection.LOWER){
+      // logic if went same or below the threshold
+      if(parseFloat(translatedValue) <= thresholdLimit && parseFloat(previousValue) > thresholdLimit){
+
+        triggerCallback(`low (${translatedValue})`, translatedDataObj);
+      }
+    }else{
+      // logic if went same or above the threshold
+      if(parseFloat(translatedValue) >= thresholdLimit && parseFloat(previousValue) < thresholdLimit){
+
+        console.log('------------------------translatedDataObj', translatedDataObj);
+        triggerCallback(`high (${translatedValue})`, translatedDataObj);
       }
     }
   };
