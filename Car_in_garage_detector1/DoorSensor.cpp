@@ -6,9 +6,14 @@
 * @author Sandun Munasinghe
 **/
 
-DoorSensor::DoorSensor(byte doorMagnetPin){
+DoorSensor::DoorSensor(byte doorMagnetPin, SensorType sensorType = SensorType::PRIMARY){
   this->pin = doorMagnetPin;
   this->doorState = LOW;
+  if(sensorType == SensorType::SECONDARY){
+    this->type = SensorType::SECONDARY;
+  }else{
+    this->type = SensorType::PRIMARY;
+  }
 }
 
 void DoorSensor::initialize(){
@@ -27,4 +32,17 @@ GarageDoor DoorSensor::getDoorState(){
   }else{
     return GarageDoor::CLOSED;
   }
+}
+
+static void DoorSensor::validateDevices(){
+  DeviceError error;
+  if(DoorSensor::primary.getDoorState() != DoorSensor::secondary.getDoorState()){
+    // primary sensor seems faulty
+    error.hasError = true;
+  }else{
+    // primary is working OK
+    error.hasError = false;
+    error.errorMessage = "OK";
+  }
+  DoorSensor::setErrorInfo(error);
 }
