@@ -4,6 +4,11 @@ import serialPort from '@/common/libraries/serialPort';
 import { garageData } from '@/common/utils/mappings';
 import { translate } from '@/common/libraries/i18n';
 
+enum ThresholdDirection {
+  LOWER,
+  HIGHER
+}
+
 const garageDataSenderParams: {
   intervalRef: NodeJS.Timeout | null;
   intervalPeriod: number;
@@ -54,6 +59,24 @@ const onStateChange = {
       data,
     });
   },
+  temperature: (temperatureState: string, data: SaveDataWebhookRequest) => {
+    // runs on garage lights state change
+    const notificationText = `The garage temperature is ${temperatureState}`;
+    homeAssistant.callNotificationsWebhook({
+      title: 'Garage Temperature : ',
+      message: notificationText,
+      data,
+    });
+  },
+  humidity: (humidityState: string, data: SaveDataWebhookRequest) => {
+    // runs on garage lights state change
+    const notificationText = `The garage humidity is ${humidityState}`;
+    homeAssistant.callNotificationsWebhook({
+      title: 'Garage Humidity : ',
+      message: notificationText,
+      data,
+    });
+  },
 };
 
 const checkForStateChanges = (dataObjFromCache: any, key: string, translatedDataObj: any) => {
@@ -62,6 +85,22 @@ const checkForStateChanges = (dataObjFromCache: any, key: string, translatedData
     if (dataObjFromCache[key]?.value !== undefined && dataObjFromCache[key]?.value !== translatedValue) {
       // the state has been changed and it is not undefined
       triggerCallback(translatedValue, translatedDataObj);
+    }
+  };
+  const valueThresholdCheck = (triggerCallback: any, thresholdLimit : number = 0, thresholdDirection : ThresholdDirection = ThresholdDirection.HIGHER) => {
+    const previousValue = dataObjFromCache[key]?.value || 0;
+    if(thresholdDirection == ThresholdDirection.LOWER){
+      // logic if went same or below the threshold
+      if(parseFloat(translatedValue) <= thresholdLimit && parseFloat(previousValue) > thresholdLimit){
+
+        triggerCallback(`low (${translatedValue})`, translatedDataObj);
+      }
+    }else{
+      // logic if went same or above the threshold
+      if(parseFloat(translatedValue) >= thresholdLimit && parseFloat(previousValue) < thresholdLimit){
+
+        triggerCallback(`high (${translatedValue})`, translatedDataObj);
+      }
     }
   };
 
@@ -74,6 +113,12 @@ const checkForStateChanges = (dataObjFromCache: any, key: string, translatedData
       break;
     case garageKeys.garageLights:
       valueChangeCheck(onStateChange.garageLights);
+      break;
+    case garageKeys.temperature:
+      valueThresholdCheck(onStateChange.temperature, 20, ThresholdDirection.LOWER);
+      break;
+    case garageKeys.humidity:
+      valueThresholdCheck(onStateChange.humidity, 80, ThresholdDirection.HIGHER);
       break;
     default:
       break;
@@ -99,12 +144,11 @@ const translateReceivedData = (flag: string, extractedData: { key: string; value
       // detect car availability
       const carData = {
         key: garageKeys.car,
-        value: 'N',
+        value: 'N', // car is not in the garage
       };
 
       if (parseFloat(extractedData.value) < CAR_DISTANCE_CM) {
-        // car is in the garage
-        carData.value = 'Y';
+        carData.value = 'Y'; // car is in the garage
       }
 
       translatedData[garageKeys.car] = {
