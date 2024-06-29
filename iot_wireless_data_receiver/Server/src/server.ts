@@ -6,6 +6,7 @@ import { pino } from 'pino';
 import { healthCheckRouter } from '@/api/healthCheck/healthCheckRouter';
 import { userRouter } from '@/api/user/userRouter';
 import { openAPIRouter } from '@/api-docs/openAPIRouter';
+// import i18n from '@/common/libraries/i18n';
 import errorHandler from '@/common/middleware/errorHandler';
 import rateLimiter from '@/common/middleware/rateLimiter';
 import requestLogger from '@/common/middleware/requestLogger';
@@ -34,5 +35,8 @@ app.use(openAPIRouter);
 
 // Error handlers
 app.use(errorHandler());
+
+// internationalization
+// app.use(i18n.init);
 
 export { app, logger };
