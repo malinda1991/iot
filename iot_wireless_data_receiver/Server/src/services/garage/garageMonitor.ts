@@ -1,8 +1,9 @@
+/* eslint-disable prettier/prettier */
 import homeAssistant, { SaveDataWebhookRequest } from '@/common/libraries/homeAssistant';
-import { getFromMemoryCache, putToMemoryCache, CACHE_ID } from '@/common/libraries/memoryCache';
+import { translate } from '@/common/libraries/i18n';
+import { CACHE_ID, getFromMemoryCache, putToMemoryCache } from '@/common/libraries/memoryCache';
 import serialPort from '@/common/libraries/serialPort';
 import { garageData } from '@/common/utils/mappings';
-import { translate } from '@/common/libraries/i18n';
 
 const garageDataSenderParams: {
   intervalRef: NodeJS.Timeout | null;
@@ -119,10 +120,13 @@ const translateReceivedData = (flag: string, extractedData: { key: string; value
       break;
   }
 
+  // mark the entity as online
+  translatedData[garageKeys.deviceOnlineState] = true;
+
   return {
     dataObjFromCache,
     translatedData,
-    extractedKey
+    extractedKey,
   };
 };
 
@@ -178,6 +182,17 @@ const recordLastPayloadReceivedEvent = (entityId: string) => {
 };
 
 const invokeRadioEntityAvailabilityCheck = () => {
+  const markOffline = (entityId: string) => {
+    const recordedData = getFromMemoryCache(entityId) || {};
+    if (recordedData.online) {
+      // if last known online state is true, mark it as false
+      putToMemoryCache(entityId, {
+        ...recordedData,
+        [garageKeys.deviceOnlineState]: false,
+      });
+    }
+  };
+
   console.log('invoked Radio entity availabilty check');
   const alertThresholdMilliSeconds: number = 5000;
   const callback = () => {
@@ -186,12 +201,13 @@ const invokeRadioEntityAvailabilityCheck = () => {
       const currentTimeInMilliSeconds = Date.now();
       const entities = Object.keys(dataObjFromCache);
       entities.forEach((entityId: string) => {
-        const lastRecordedTime = dataObjFromCache[entityId];
+        const lastRecordedTime = dataObjFromCache[entityId] || 0;
         if (lastRecordedTime) {
           // has a last recorded time in the memory
           if (currentTimeInMilliSeconds - lastRecordedTime > alertThresholdMilliSeconds) {
             // has not received data than the alert threshold time
-            console.log(`*****${entityId} is not available`);
+            console.log(`${entityId} is not available`);
+            markOffline(entityId);
           }
         }
       });

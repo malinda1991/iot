@@ -11,6 +11,7 @@ type ReceiverDataKeys = {
   airQuality: string;
   carDistance: string;
   batteryLevel: string;
+  deviceOnlineState: string;
 };
 type KeyMapper = Record<string, string>;
 type ValueMapper = Record<string, KeyMapper>;
@@ -36,6 +37,7 @@ const keys: ReceiverDataKeys = {
   airQuality: 'AQ',
   carDistance: 'carDist',
   batteryLevel: 'btty',
+  deviceOnlineState: 'online',
 };
 
 const keyMapping: KeyMapper = {
@@ -47,6 +49,7 @@ const keyMapping: KeyMapper = {
   [keys.airQuality]: 'Air Quality',
   [keys.carDistance]: 'Car Distance',
   [keys.batteryLevel]: 'Battery Level',
+  [keys.deviceOnlineState]: 'Device Online State',
 };
 const valueMapping: ValueMapper = {
   [keys.car]: {
