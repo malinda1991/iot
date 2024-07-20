@@ -22,7 +22,7 @@ This board should be connected over USB to another computer (eg: a Raspberry Pi)
 
 ### Server
 
-This server is written on **ExpressJS** framework based on **NodeJS**.
+This server is written using the **ExpressJS** framework based on **NodeJS**.
 It continuesly reads the USB serial connection of the arduino receiver board to read the transmissions being sent from the **Car_in_garage_detector1** board to the **iot_wireless_data_receiver**.
 If any required values were received, the **Server* will call some webhooks of a **Home Assistant** instance to update it's sensors and trigger alerts
 
