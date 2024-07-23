@@ -1,7 +1,7 @@
 
 # iot
 
-Some Arduino projects to make life easier
+Some Arduino projects to make life easier and a DIY way to make a home smart
 
 ### Car_in_garage_detector1
 
