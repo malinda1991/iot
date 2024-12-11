@@ -2,23 +2,25 @@
 #define RELAY_MODULE_H
 
 #include <Arduino.h>
-#include "CommonParams.h"
 
-enum RelayStatus {
+enum RelayStatus
+{
   on,
   off
 };
 
-class RelayModule{
-  private:
-    int pin;
-    RelayStatus status;
+class RelayModule
+{
+private:
+  int pin;
+  RelayStatus status;
 
-  public:
-    RelayModule(int pin);
-    void initialize();
-    void turnOn();
-    void turnOff();
+public:
+  RelayModule(int pin);
+  void initialize();
+  void turnOn();
+  void turnOff();
+  RelayStatus getStatus();
 };
 
 #endif
